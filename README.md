@@ -1,5 +1,5 @@
 # librim
-A C library to handle my custom .rim file format along with some tests and tools
+A C library along with a Python module to handle my custom .rim file format along with some tests and tools
 
 # About
 RIM or "Raw Image" is a simple image file format I created more than a year ago for my games and whatnot.
