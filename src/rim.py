@@ -1,5 +1,10 @@
 """This is the pure-Python library for handling .rim files. This is separate from librim.c"""
 __all__ = ["RIM"]
+try:
+    from PIL import Image, ImagePalette
+except ImportError:
+    Image = None
+    ImagePalette = None
 import struct, array
 from io import IOBase, BytesIO
 RIM_MAGIC = b"RAWIMG\0"
@@ -71,3 +76,13 @@ class RIM(object):
         finally:
             if autoclose:
                 fp.close()
+    def to_pil_image(self):
+        if Image is None:
+            raise RuntimeError("PIL.Image is not available.")
+        pilmode = {COLFMT_GRAYSCALE: "L", COLFMT_GRAYALPHA: "LA", COLFMT_RGB: "RGB", COLFMT_RGBA: "RGBA"}[self.colorfmt]
+        if not self.indexed:
+            return Image.frombuffer(pilmode, (self.width, self.height), self.pixels, "raw", pilmode, 0, 1)
+        else:
+            img = Image.frombuffer("P", (self.width, self.height), self.pixels, "raw", pilmode, 0, 1)
+            img.palette = ImagePalette(mode=pilmode, palette=self.palette)
+            return img
