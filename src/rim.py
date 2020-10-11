@@ -5,6 +5,10 @@ try:
 except ImportError:
     Image = None
     ImagePalette = None
+try:
+    import numpy as np
+except ImportError:
+    np = None
 import struct, array
 from io import IOBase, BytesIO
 RIM_MAGIC = b"RAWIMG\0"
@@ -25,6 +29,12 @@ def _getfile(fp, mode='rb', open=open):
         return fp, False
     else:
         return open(fp, mode), True
+def _assert_pil():
+    if Image is None:
+        raise RuntimeError("PIL/Pillow is not available.")
+def _assert_numpy():
+    if Image is None:
+        raise RuntimeError("numpy is not available.")
 class RIM(object):
     width, height = None, None
     colorfmt = None
@@ -76,13 +86,23 @@ class RIM(object):
         finally:
             if autoclose:
                 fp.close()
+    def palette_as_numpy_array(self):
+        _assert_numpy()
+        return (np.frombuffer(self.palette, dtype=np.uint8).reshape(-1, 3) if self.indexed else None)
+    def pixels_as_numpy_array(self, do_palette_lookup=False):
+        _assert_numpy()
+        if do_palette_lookup and self.indexed:
+            pal = self.palette_as_numpy_array()
+            pixels_raw = np.frombuffer(self.pixels, dtype=np.uint8)
+            return pal[pixels_raw].reshape(self.height, self.width, -1)
+        else:
+            return np.frombuffer(self.pixels, dtype=np.uint8).reshape(self.height, self.width, -1)
     def to_pil_image(self):
-        if Image is None:
-            raise RuntimeError("PIL.Image is not available.")
+        _assert_pil()
         pilmode = {COLFMT_GRAYSCALE: "L", COLFMT_GRAYALPHA: "LA", COLFMT_RGB: "RGB", COLFMT_RGBA: "RGBA"}[self.colorfmt]
         if not self.indexed:
             return Image.frombuffer(pilmode, (self.width, self.height), self.pixels, "raw", pilmode, 0, 1)
         else:
-            img = Image.frombuffer("P", (self.width, self.height), self.pixels, "raw", pilmode, 0, 1)
-            img.palette = ImagePalette(mode=pilmode, palette=self.palette)
+            img = Image.frombuffer("P", (self.width, self.height), self.pixels, "raw")
+            img.putpalette(self.palette, rawmode=pilmode)
             return img
