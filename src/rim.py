@@ -106,3 +106,33 @@ class RIM(object):
             img = Image.frombuffer("P", (self.width, self.height), self.pixels, "raw")
             img.putpalette(self.palette, rawmode=pilmode)
             return img
+    def convert_to_rgba(self):
+        rgba_pixels = array.array("B", b'\0'*self.num_pixels*4)
+        nurim = type(self)()
+        nurim.width, nurim.height = self.width, self.height
+        nurim.palette = None
+        nurim.pixels = rgba_pixels
+        nurim.colorfmt = COLFMT_RGBA
+        if self.colorfmt == COLFMT_RGBA:
+            rgba_pixels[:] = self.pixels
+        else:
+            outpixel = array.array("B", b"\0"*4)
+            nullout = (0,)*4
+            for i in range(self.num_pixels):
+                if self.indexed:
+                    invalue = self.pixels[i]
+                    inpixel = self.palette[(invalue*self.colorfmt):((invalue+1)*self.colorfmt)]
+                else:
+                    inpixel = self.pixels[(i*self.colorfmt):((i+1)*self.colorfmt)]
+                outpixel[:] = nullout
+                if self.colorfmt == COLFMT_GRAYSCALE:
+                    outpixel[:] = ((inpixel[0],)*3)+(255,)
+                elif self.colorfmt == COLFMT_GRAYALPHA:
+                    outpixel[:] = ((inpixel[0],)*3)+(inpixel[1],)
+                elif self.colorfmt == COLFMT_RGB:
+                    outpixel[0:3] = inpixel
+                    outpixel[3] = 255
+                else:
+                    pass
+                rgba_pixels[(i*4):((i+1)*4)] = outpixel
+        return nurim
