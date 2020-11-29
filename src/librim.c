@@ -343,7 +343,7 @@ uint8_t* get_rim_pixelptr(rim_t* rim, int x, int y)
 {
     if (((x >= 0) && (x < (rim->width))) && ((y >= 0) && (y < (rim->height))))
     {
-        return (rim->pixels)+((y*(rim->width))+x);
+        return (rim->pixels)+(((y*(rim->width))+x)*rim->colorfmt);
     }
     else
     {
